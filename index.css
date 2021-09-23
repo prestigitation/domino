@@ -10,6 +10,10 @@
     justify-content: center;
 }
 
+.avaliable_domino {
+    border: 5px dotted white;
+}
+
 #opponent_user_domino_container {
     position: absolute;
     bottom: 5px;
@@ -30,4 +34,17 @@
     border-radius: 5px;
     border: 1px solid limegreen;
     cursor: pointer;
+}
+
+#domino_field {
+    z-index: 0;
+    position: absolute;
+    height: 75%;
+    margin-top: 100px;
+    margin-bottom: 100px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    background: url("https://img3.goodfon.ru/wallpaper/nbig/6/54/derevo-fon-temnyy.jpg");
+    filter: brightness(70%);
 }

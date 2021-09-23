@@ -1,5 +1,5 @@
 //const Domino = require('./dominoes')
-class Game {
+/* class Game {
     constructor() {
         this.userPool = []
         this.opponentPool = []
@@ -29,4 +29,4 @@ class Game {
 }
 
 let game = new Game()
-game.start()
+game.start() */

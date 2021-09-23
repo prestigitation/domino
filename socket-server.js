@@ -15,6 +15,8 @@ let userPool = []
 let opponentPool = []
 let shopPool = []
 
+let fieldPool = [] // Общий пул, используемый на столе при выставлении домино
+
 
 let wasUserPoolRecieved = false
 
@@ -22,6 +24,15 @@ let wasUserPoolRecieved = false
 
 io.on("connect_error", (err) => { console.log(`connect_error due to ${err.message}`); });
 io.on('connect', socket => {
+    socket.on('checkAvaliablePlacement', (obj) => {
+        if (fieldPool.length === 0) { // TODO: Добавить условие с rightSide i leftSide
+            socket.emit('recieveAvaliablePlacement', {
+                leftSide: true,
+                rightSide: true,
+                emptyField: true,
+            })
+        }
+    })
     socket.on('joinRoom', (room) => {
         socket.join(room)
         const dominoRoom = socket.adapter.rooms.get('domino')
