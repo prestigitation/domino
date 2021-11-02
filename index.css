@@ -48,3 +48,18 @@
     background: url("https://img3.goodfon.ru/wallpaper/nbig/6/54/derevo-fon-temnyy.jpg");
     filter: brightness(70%);
 }
+
+#domino_field .user_domino:first-child {
+    display: flex;
+}
+
+#field_container {
+    display: flex;
+    justify-content: center;
+    margin-top: 300px;
+}
+
+#field_container .user_domino {
+    margin: 0;
+    padding: 0;
+}
