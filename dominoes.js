@@ -4,6 +4,6 @@ module.exports = class Domino {
     constructor(leftSide, rightSide) {
         this.leftSide = leftSide
         this.rightSide = rightSide
-        this._image = this.pathToImages + this.leftSide + this.rightSide + '.jpg'
+        this._image = this.pathToImages + this.leftSide + this.rightSide + '.png'
     }
 }

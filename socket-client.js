@@ -7,7 +7,7 @@ let rightSide = undefined
 
 const socket = io("ws://localhost:3000", { forceNew: true });
 
-socket.on('connect', (sock) => {
+socket.on('connect', () => {
     socket.emit('joinRoom', 'domino')
 })
 
@@ -15,12 +15,11 @@ socket.on('connect', (sock) => {
 socket.on('recieveAvaliablePlacement', (places) => {
     console.log(places)
     let field = document.getElementById('field_container')
-    createAvaliableDomino(field.offsetWidth / 2 - dominoWidth / 2, field.offsetHeight / 6, places.emptyField ? true : false, places.leftSide, places.rightSide)
+    createAvaliableDomino(places.emptyField ? true : false, places.leftSide, places.rightSide)
 })
 
 socket.on('recievePool', pool => {
     let userDominoContainer = document.getElementById('user_domino_container')
-        //let opponentDominoContainer = document.getElementById('opponent_user_domino_container')
     for (let i in pool) {
         let userDomino = document.createElement('img')
         userDomino.classList.add('user_domino')
@@ -28,17 +27,12 @@ socket.on('recievePool', pool => {
         userDomino.rightSide = pool[i].rightSide
         userDomino.src = pool[i]._image
         userDominoContainer.appendChild(userDomino)
-
-        /*let opponentDomino = document.createElement('img')
-        opponentDomino.classList.add('user_domino')
-        opponentDomino.src = pool[0]._image
-        opponentDominoContainer.appendChild(opponentDomino)*/
     }
 })
 
 
 socket.on('placeDomino', domino => {
-    console.log('conn')
+    console.log(domino)
     let field = document.getElementById('field_container')
     let selectedDomino = Array
         .from(document.getElementById('user_domino_container').childNodes)
@@ -48,7 +42,7 @@ socket.on('placeDomino', domino => {
         userDomino.classList.add('user_domino')
         userDomino.leftSide = domino.leftSide
         userDomino.rightSide = domino.rightSide
-        userDomino.src = `./images/${userDomino.leftSide}${userDomino.rightSide}.jpg`
+        userDomino.src = `./images/${userDomino.leftSide}${userDomino.rightSide}.png`
         selectedDomino = userDomino
         document.getElementById('user_domino_container').appendChild(userDomino)
     } else {}
@@ -62,13 +56,12 @@ socket.on('placeDomino', domino => {
             field.removeChild(secondAvaliableDomino)
         }
     }
-
-    // если доминошку поставить вправо, делаем prepend, т.е вставляем перед нужным узлом
-    // влево идет просто append
     if (domino.reverse) {
         selectedDomino.style.transform = "rotate(180deg)"
     }
 
+    // если доминошку поставить вправо, делаем prepend, т.е вставляем перед нужным узлом
+    // влево идет просто append
     if (!domino.target || domino.target == 'right' && selectedDomino) {
         field.appendChild(selectedDomino)
     } else if (domino.target && domino.target == 'left' && selectedDomino) {
@@ -126,24 +119,24 @@ window.onload = function() {
             } else if (e.target.classList.contains('left_avaliable_domino')) {
                 targetSide = 'left'
             }
-            console.log(targetSide)
+
+            let currentSelectedDomino = localStorage.getItem('currentSelectedDomino')
             socket.emit('attemptDominoPlace', {
-                domino: localStorage.getItem('currentSelectedDomino'),
-                leftFieldSide: leftSide,
-                rightFieldSide: rightSide,
+                domino: currentSelectedDomino,
+                leftFieldSide: JSON.parse(currentSelectedDomino).leftSide,
+                rightFieldSide: JSON.parse(currentSelectedDomino).rightSide,
                 targetSide
             })
         }
     })
 }
 
-function createAvaliableDomino(offsetWidth, offsetHeight, emptyField, leftSide, rightSide) { // Добавить проверку left i right
+function createAvaliableDomino(emptyField, leftSide, rightSide) { // Добавить проверку left i right
+    console.log(emptyField, leftSide, rightSide)
     let field = document.getElementById('field_container')
     let avaliableDomino = document.createElement('div')
-    console.log(emptyField)
     if (emptyField) {
 
-        avaliableDomino.style.marginTop = offsetHeight + 'px'
         avaliableDomino.style.width = dominoWidth + 'px'
         avaliableDomino.style.height = dominoHeight + 'px'
         avaliableDomino.classList.add('avaliable_domino')
@@ -151,24 +144,29 @@ function createAvaliableDomino(offsetWidth, offsetHeight, emptyField, leftSide, 
         field.append(avaliableDomino)
 
         wasAvaliableDominoShowed = true
-    } else if (!emptyField) {
-        // TODO: refactor
-        if (leftSide) {
-            let leftAvaliableDomino = document.createElement('div')
-            leftAvaliableDomino.style.width = dominoWidth + 'px'
-            leftAvaliableDomino.style.height = dominoHeight + 'px'
-            leftAvaliableDomino.classList.add('avaliable_domino')
-            leftAvaliableDomino.classList.add('left_avaliable_domino')
-            field.insertBefore(leftAvaliableDomino, field.firstChild)
-        }
-        if (rightSide) {
-            let rightAvaliableDomino = document.createElement('div')
-            rightAvaliableDomino.style.width = dominoWidth + 'px'
-            rightAvaliableDomino.style.height = dominoHeight + 'px'
-            rightAvaliableDomino.classList.add('right_avaliable_domino')
-            rightAvaliableDomino.classList.add('avaliable_domino')
-
-            field.append(rightAvaliableDomino)
-        }
+    } else if (!emptyField && (rightSide || leftSide)) {
+        setAvaliableDominoPlacement(leftSide, rightSide)
     }
+}
+
+function setAvaliableDominoPlacement(leftSide, rightSide) {
+    let field = document.getElementById('field_container')
+    console.log(leftSide, rightSide)
+    if (leftSide) {
+        let leftAvaliableDomino = renderAvaliableDomino('left')
+        field.insertBefore(leftAvaliableDomino, field.firstChild)
+    }
+    if (rightSide) {
+        let rightAvaliableDomino = renderAvaliableDomino('right')
+        field.append(rightAvaliableDomino)
+    }
+}
+
+function renderAvaliableDomino(target) {
+    let newAvaliableDomino = document.createElement('div')
+    newAvaliableDomino.style.width = dominoWidth + 'px'
+    newAvaliableDomino.style.height = dominoHeight + 'px'
+    newAvaliableDomino.classList.add('avaliable_domino')
+    newAvaliableDomino.classList.add(target + '_avaliable_domino')
+    return newAvaliableDomino
 }

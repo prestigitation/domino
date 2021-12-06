@@ -36,7 +36,7 @@ io.on('connect', socket => {
             fieldPool[0].left = obj.leftSide
             fieldPool[0].right = obj.rightSide
             console.log(fieldPool)
-        } else if (fieldPool[0].right >= 0 && fieldPool[0].left >= 0) {
+        } else {
             socket.emit('recieveAvaliablePlacement', {
                 leftSide: obj.leftSide == fieldPool[0].left || obj.rightSide == fieldPool[0].left,
                 rightSide: obj.leftSide == fieldPool[0].right || obj.rightSide == fieldPool[0].right,
@@ -104,35 +104,33 @@ io.on('connect', socket => {
 
     socket.on('attemptDominoPlace', domino => {
         let bone = JSON.parse(domino.domino)
-        if (!bone.leftFieldSide && !bone.rightFieldSide) {
-            let boneTargetSide = domino.targetSide
-            let reverse // будет ли доминошка реверснута
-            if (boneTargetSide == 'right') {
-                if (bone.rightSide == fieldPool[0].right) {
-                    reverse = true
-                    fieldPool[0].right = bone.leftSide
-                } else fieldPool[0].right = bone.rightSide
-            } else if (boneTargetSide == 'left') {
-                if (bone.leftSide == fieldPool[0].left) {
-                    reverse = true
-                    fieldPool[0].left = bone.rightSide
-                } else fieldPool[0].left = bone.leftSide
-            }
-            socket.emit('placeDomino', {
-                rightSide: bone.rightSide,
-                leftSide: bone.leftSide,
-                first: true,
-                target: domino.targetSide,
-                reverse
-            })
-            socket.broadcast.emit('placeDomino', {
-                rightSide: bone.rightSide,
-                leftSide: bone.leftSide,
-                first: true,
-                target: domino.targetSide,
-                reverse
-            })
+        let boneTargetSide = domino.targetSide
+        let reverse // будет ли доминошка реверснута
+        if (boneTargetSide == 'right') {
+            if (bone.rightSide == fieldPool[0].right) {
+                reverse = true
+                fieldPool[0].right = bone.leftSide
+            } else fieldPool[0].right = bone.rightSide
+        } else if (boneTargetSide == 'left') {
+            if (bone.leftSide == fieldPool[0].left) {
+                reverse = true
+                fieldPool[0].left = bone.rightSide
+            } else fieldPool[0].left = bone.leftSide
         }
+        socket.emit('placeDomino', {
+            rightSide: bone.rightSide,
+            leftSide: bone.leftSide,
+            first: true,
+            target: boneTargetSide,
+            reverse
+        })
+        socket.broadcast.emit('placeDomino', {
+            rightSide: bone.rightSide,
+            leftSide: bone.leftSide,
+            first: true,
+            target: domino.targetSide,
+            reverse
+        })
     })
 })
 
