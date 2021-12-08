@@ -1,12 +1,12 @@
 const _ = require('lodash')
 const Domino = require('./dominoes')
 const io = require("socket.io")(3000, {
-    withCredentials: true,
     cors: {
-        origin: 'http://127.0.0.1:5500',
-        credentials: true
+        origin: '*',
+        credentials: false
     },
-    allowEIO3: true
+    allowEIO3: true,
+    rejectUnauthorized: false
 });
 
 let dominoPool = []
@@ -19,14 +19,18 @@ let fieldPool = [] // Общий пул, используемый на стол�
 
 
 let wasUserPoolRecieved = false
-let wasUserRecievedDomino = false
 
+let firstTurn = Math.round(getRandomValueBetween(0, 1)) // выкидываем монетку на право первого хода
+let userTurn = firstTurn === 1
+let opponentTurn = firstTurn === 0
+
+console.log('user: ' + userTurn + 'opponentTurn: ' + opponentTurn)
 
 
 io.on("connect_error", (err) => { console.log(`connect_error due to ${err.message}`); });
 io.on('connect', socket => {
     socket.on('checkAvaliablePlacement', obj => {
-        if (fieldPool.length == 0) { // TODO: Добавить условие с rightSide i leftSide
+        if (fieldPool.length == 0) { // TODO: Обработать рыбу
             socket.emit('recieveAvaliablePlacement', {
                 leftSide: false,
                 rightSide: false,
@@ -86,10 +90,28 @@ io.on('connect', socket => {
                     shopPool.push(dominoPool[a])
                 }
             }
+
             if (!wasUserPoolRecieved) {
                 socket.emit('recievePool', userPool)
-            } else socket.emit('recievePool', opponentPool)
+                console.log('Отправил оппоненту: ' + opponentTurn)
+                console.log('отправил юзеру:' + userTurn)
+                console.log('userPool-------------------------')
+                console.log(userPool)
+                console.log('opponent ------------------------')
+                console.log(opponentPool)
+            } else {
+                socket.broadcast.emit('recievePool', opponentPool)
+            }
+            socket.emit('turn', userTurn)
+            socket.broadcast.emit('turn', opponentTurn)
         }
+    })
+
+    socket.on('changeTurn', () => {
+        userTurn = !userTurn
+        opponentTurn = !opponentTurn
+        socket.emit('turn', userTurn)
+        socket.broadcast.emit('turn', opponentTurn)
     })
 
 
@@ -99,6 +121,11 @@ io.on('connect', socket => {
             shopPool = shopPool.filter(e => e.leftSide != shopDomino.leftSide || e.rightSide != shopDomino.rightSide) // убираем выбранную доминошку из пула и выдаем ее клиенту
             socket.emit('recieveShopDomino', shopDomino)
         } else socket.emit('recieveShopDomino', { message: 'Базар пуст' })
+    })
+
+    socket.on('gameOver', () => {
+        // отсылаем проигравшему сообщение о проигрыше
+        socket.broadcast.emit('gameOver')
     })
 
 
@@ -117,6 +144,7 @@ io.on('connect', socket => {
                 fieldPool[0].left = bone.rightSide
             } else fieldPool[0].left = bone.leftSide
         }
+
         socket.emit('placeDomino', {
             rightSide: bone.rightSide,
             leftSide: bone.leftSide,
@@ -124,6 +152,7 @@ io.on('connect', socket => {
             target: boneTargetSide,
             reverse
         })
+
         socket.broadcast.emit('placeDomino', {
             rightSide: bone.rightSide,
             leftSide: bone.leftSide,
@@ -131,6 +160,7 @@ io.on('connect', socket => {
             target: domino.targetSide,
             reverse
         })
+
     })
 })
 

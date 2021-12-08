@@ -5,7 +5,10 @@ let wasAvaliableDominoShowed = false
 let leftSide = undefined // представляет собой числовое значение домино, оказавшееся скраю выбранного угла
 let rightSide = undefined
 
-const socket = io("ws://localhost:3000", { forceNew: true });
+let turn = undefined
+
+
+const socket = io("http://127.0.0.1:3000", { forceNew: true, withCredentials: false });
 
 socket.on('connect', () => {
     socket.emit('joinRoom', 'domino')
@@ -15,7 +18,21 @@ socket.on('connect', () => {
 socket.on('recieveAvaliablePlacement', (places) => {
     console.log(places)
     let field = document.getElementById('field_container')
-    createAvaliableDomino(places.emptyField ? true : false, places.leftSide, places.rightSide)
+        // удаляем все avaliable ноды, до отрисовки, чтоб исключить дубликаты
+    let rightDuplicateDomino = field.querySelectorAll('.right_avaliable_domino')
+    let leftDuplicateDomino = field.querySelectorAll('.left_avaliable_domino')
+    let firstAvaliableDomino = field.querySelectorAll('.avaliable_domino')
+    console.log(firstAvaliableDomino)
+    if ((rightDuplicateDomino || leftDuplicateDomino) && !places.emptyField) {
+        for (let elem of rightDuplicateDomino) {
+            field.removeChild(elem)
+        }
+        for (let elem of leftDuplicateDomino) {
+            field.removeChild(elem)
+        }
+    }
+
+    createAvaliableDomino(!!places.emptyField, places.leftSide, places.rightSide)
 })
 
 socket.on('recievePool', pool => {
@@ -30,9 +47,28 @@ socket.on('recievePool', pool => {
     }
 })
 
+socket.on('turn', (value) => {
+    if (value) {
+        turn = true
+        document.getElementById('turn').innerHTML =
+            `
+        <span class="turn_text turn_player">
+            Ваш ход!
+        </span>
+        `
+    } else {
+        turn = false
+        document.getElementById('turn').innerHTML =
+            `
+        <span class="turn_text turn_opponent">
+            Сейчас ход противника
+        </span>
+        `
+    }
+})
+
 
 socket.on('placeDomino', domino => {
-    console.log(domino)
     let field = document.getElementById('field_container')
     let selectedDomino = Array
         .from(document.getElementById('user_domino_container').childNodes)
@@ -47,16 +83,11 @@ socket.on('placeDomino', domino => {
         document.getElementById('user_domino_container').appendChild(userDomino)
     } else {}
     if (domino.first) {
-        let avaliableDomino = document.getElementsByClassName('avaliable_domino')[0]
-        let secondAvaliableDomino = document.getElementsByClassName('avaliable_domino')[1]
-        if (avaliableDomino) {
-            field.removeChild(avaliableDomino)
-        }
-        if (secondAvaliableDomino) {
-            field.removeChild(secondAvaliableDomino)
-        }
+        removeAvaliableDomino(0)
+        removeAvaliableDomino(1)
     }
     if (domino.reverse) {
+        //transform: rotateX(180deg);
         selectedDomino.style.transform = "rotate(180deg)"
     }
 
@@ -68,9 +99,16 @@ socket.on('placeDomino', domino => {
         field.prepend(selectedDomino)
     }
 
+    socket.emit('changeTurn')
+
     if (!document.getElementById('user_domino_container').getElementsByClassName('user_domino').length) {
+        socket.emit('gameOver')
         alert('Вы выиграли')
     }
+})
+
+socket.on('gameOver', () => {
+    alert('К сожалению, вы проиграли :(')
 })
 
 socket.on('recieveShopDomino', (domino) => {
@@ -95,7 +133,8 @@ window.onload = function() {
     })
 
     document.getElementById('user_domino_container').addEventListener('click', function(e) {
-        if (e.target.parentElement.id == 'user_domino_container') {
+        console.log(turn)
+        if (e.target.parentElement.id == 'user_domino_container' && turn) {
             // если мы кликнули на блок, где находятся пользовательские домино и выбрали именно доминошку
             const targetElement = {
                 leftSide: e.target.leftSide,
@@ -112,7 +151,7 @@ window.onload = function() {
     })
 
     document.getElementById('field_container').addEventListener('click', function(e) {
-        if (e.target.classList.contains('avaliable_domino')) {
+        if (e.target.classList.contains('avaliable_domino') && turn) {
             let targetSide // в какую сторону мы ставим домино
             if (e.target.classList.contains('right_avaliable_domino')) {
                 targetSide = 'right'
@@ -132,33 +171,32 @@ window.onload = function() {
 }
 
 function createAvaliableDomino(emptyField, leftSide, rightSide) { // Добавить проверку left i right
-    console.log(emptyField, leftSide, rightSide)
     let field = document.getElementById('field_container')
     let avaliableDomino = document.createElement('div')
-    if (emptyField) {
-
-        avaliableDomino.style.width = dominoWidth + 'px'
-        avaliableDomino.style.height = dominoHeight + 'px'
-        avaliableDomino.classList.add('avaliable_domino')
-
-        field.append(avaliableDomino)
-
-        wasAvaliableDominoShowed = true
-    } else if (!emptyField && (rightSide || leftSide)) {
-        setAvaliableDominoPlacement(leftSide, rightSide)
+    if (turn) {
+        if (emptyField) {
+            avaliableDomino.style.width = dominoWidth + 'px'
+            avaliableDomino.style.height = dominoHeight + 'px'
+            avaliableDomino.classList.add('avaliable_domino')
+            field.append(avaliableDomino)
+            wasAvaliableDominoShowed = true
+        } else if (!emptyField && (rightSide || leftSide)) {
+            setAvaliableDominoPlacement(leftSide, rightSide)
+        }
     }
 }
 
 function setAvaliableDominoPlacement(leftSide, rightSide) {
-    let field = document.getElementById('field_container')
-    console.log(leftSide, rightSide)
-    if (leftSide) {
-        let leftAvaliableDomino = renderAvaliableDomino('left')
-        field.insertBefore(leftAvaliableDomino, field.firstChild)
-    }
-    if (rightSide) {
-        let rightAvaliableDomino = renderAvaliableDomino('right')
-        field.append(rightAvaliableDomino)
+    if (turn) {
+        let field = document.getElementById('field_container')
+        if (leftSide) {
+            let leftAvaliableDomino = renderAvaliableDomino('left')
+            field.insertBefore(leftAvaliableDomino, field.firstChild)
+        }
+        if (rightSide) {
+            let rightAvaliableDomino = renderAvaliableDomino('right')
+            field.append(rightAvaliableDomino)
+        }
     }
 }
 
@@ -169,4 +207,12 @@ function renderAvaliableDomino(target) {
     newAvaliableDomino.classList.add('avaliable_domino')
     newAvaliableDomino.classList.add(target + '_avaliable_domino')
     return newAvaliableDomino
+}
+
+function removeAvaliableDomino(index) {
+    let field = document.getElementById('field_container')
+    let avaliableDomino = document.getElementsByClassName('avaliable_domino')[index]
+    if (avaliableDomino) {
+        field.removeChild(avaliableDomino)
+    }
 }

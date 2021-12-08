@@ -16,9 +16,22 @@
     height: 40px !important;
 }
 
+.turn_text {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.turn_player {
+    color: rgb(18, 161, 18)
+}
+
+.turn_opponent {
+    color: rgb(207, 55, 55);
+}
+
 #opponent_user_domino_container {
     position: absolute;
-    bottom: 5px;
+    bottom: 5%;
 }
 
 #opponent_user_domino_container,
