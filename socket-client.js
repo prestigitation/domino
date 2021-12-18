@@ -12,7 +12,7 @@ let turn = undefined
 
 //TODO: drag-n-drop
 const socket = io("http://127.0.0.1:3000", { forceNew: true, withCredentials: false });
-console.log(socket)
+
 socket.on('connect', () => {
     socket.emit('joinRoom', 'domino')
 })
@@ -42,18 +42,16 @@ socket.on('recievePool', pool => {
     console.log('поулчил пул')
     console.log(pool)
 
-    console.log('do');
-
     let userDominoContainer = document.getElementById('user_domino_container')
-    for (let i = 0; i < userDominoContainer.children.length; i++) {
-        if (!userDominoContainer.children[i].classList.contains('shop')) {
-            userDominoContainer.removeChild(userDominoContainer.children[i])
-        }
-    }
 
-    console.log('posle');
-    console.log(userDominoContainer.children);
-
+    userDominoContainer.innerHTML = ''
+    let shop = document.createElement('button')
+    shop.id = 'shop_button'
+    shop.innerText = 'Базар'
+    shop.addEventListener('click', () => {
+        socket.emit('getShopDomino', socket.id)
+    })
+    userDominoContainer.appendChild(shop)
 
     for (let i in pool) {
         let userDomino = document.createElement('img')
@@ -66,24 +64,23 @@ socket.on('recievePool', pool => {
 })
 
 socket.on('turn', (value) => {
-    console.log('turns ' + value)
+    let turnHtml
     if (value) {
         turn = true
-            /*document.getElementById('turn').innerHTML =
-                `
+        turnHtml = `
             <span class="turn_text turn_player">
-                Ваш ход!
+                Сейчас ваш ход!
             </span>
-            `*/
+            `
     } else {
         turn = false
-            /*document.getElementById('turn').innerHTML =
+        turnHtml = `
+                <span class="turn_text turn_opponent">
+                    Сейчас ход противника
+                </span>
                 `
-            <span class="turn_text turn_opponent">
-                Сейчас ход противника
-            </span>
-            `*/
     }
+    createTurnNode(turnHtml)
 })
 
 
@@ -125,8 +122,9 @@ socket.on('placeDomino', domino => {
 
 
     if (!document.getElementById('user_domino_container').getElementsByClassName('user_domino').length) {
-        socket.emit('gameOver')
         alert('Вы выиграли')
+        socket.emit('gameOver')
+
     }
 })
 
@@ -151,10 +149,10 @@ socket.on('recieveShopDomino', (domino) => {
 
 window.onload = function() {
 
-    document.getElementById('shop_button').addEventListener('click', function(e) {
+    /*document.getElementById('shop_button').addEventListener('click', function(e) {
         console.log('clicked')
         socket.emit('getShopDomino', socket.id)
-    })
+    })*/
 
     document.getElementById('user_domino_container').addEventListener('click', function(e) {
         console.log(turn)
@@ -197,7 +195,7 @@ window.onload = function() {
 function createAvaliableDomino(emptyField, leftSide, rightSide) { // Добавить проверку left i right
     let field = document.getElementById('field_container')
     let avaliableDomino = document.createElement('div')
-    if (turn) {
+    if (turn || turn === undefined) {
         if (emptyField) {
             avaliableDomino.style.width = dominoWidth + 'px'
             avaliableDomino.style.height = dominoHeight + 'px'
@@ -238,5 +236,18 @@ function removeAvaliableDomino() {
     let avaliableDomino = document.getElementsByClassName('avaliable_domino')
     for (let i = 0; i < avaliableDomino.length; i++) {
         field.removeChild(avaliableDomino[i])
+    }
+}
+
+function createTurnNode(innerHtml) {
+    let container = document.getElementById('user_domino_container')
+    let turnNode = container.querySelector('#turn')
+    if (!turnNode) {
+        let turnNode = document.createElement('div')
+        turnNode.id = 'turn'
+        turnNode.innerHTML = innerHtml
+        container.prepend(turnNode)
+    } else {
+        turnNode.innerHTML = innerHtml
     }
 }

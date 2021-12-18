@@ -35,7 +35,10 @@
 }
 
 #opponent_user_domino_container,
-#user_domino_container {
+#user_domino_container
+/* TODO: display block, выровнять доминошки, увеличить высоту блока с домино */
+
+{
     width: 100%;
     display: flex;
     justify-content: center;
@@ -71,10 +74,21 @@
 #field_container {
     display: flex;
     justify-content: center;
-    margin-top: 300px;
+    margin-top: 100px;
 }
 
 #field_container .user_domino {
     margin: 0;
     padding: 0;
+}
+
+#turn {
+    margin-left: 10px;
+    margin-right: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid sandybrown;
+    padding-left: 5px;
+    padding-right: 5px;
 }
