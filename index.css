@@ -35,13 +35,14 @@
 }
 
 #opponent_user_domino_container,
-#user_domino_container
-/* TODO: display block, выровнять доминошки, увеличить высоту блока с домино */
-
-{
+#user_domino_container {
     width: 100%;
     display: flex;
     justify-content: center;
+}
+
+#user_domino_container {
+    flex-wrap: wrap;
 }
 
 #shop_button {
@@ -55,11 +56,12 @@
 }
 
 #domino_field {
+    display: flex;
+    justify-content: center;
     z-index: 0;
     position: absolute;
     height: 75%;
-    margin-top: 100px;
-    margin-bottom: 100px;
+    margin-top: 225px;
     width: 100%;
     margin-left: auto;
     margin-right: auto;
