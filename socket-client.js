@@ -109,7 +109,6 @@ socket.on('placeDomino', domino => {
     removeAvaliableDomino()
 
     let sideTarget
-    let sideCounter
     if (domino.target == 'right') {
         sideTarget = rightDominoCount
         sideCounter = rightCountIndex
@@ -120,70 +119,27 @@ socket.on('placeDomino', domino => {
         sideCounter = leftCountIndex
         bottomCounter = leftBottomIndex
     }
-
-    let formula = ((150 * sideCounter) + 50)
-
-    if (sideTarget >= standartPoolCount && sideTarget < standartPoolCount + 3) {
-        if (sideTarget == standartPoolCount) { // standartPoolCount
-            selectedDomino.style.marginLeft = '-50px'
-            selectedDomino.style.marginRight = '-50px'
-        } else {
-            if (domino.target == 'left') {
-                selectedDomino.style.marginLeft = '100px'
-                selectedDomino.style.marginRight = '-100px'
-            } else if (domino.target == 'right') {
-                if (sideTarget > standartPoolCount + 1) {
-                    selectedDomino.style.marginLeft = '-250px'
-                    selectedDomino.style.marginRight = '100px'
-                } else {
-                    selectedDomino.style.marginLeft = '-100px'
-                    selectedDomino.style.marginRight = '100px'
-                }
+    let { top, left, right, rotate } = getDominoMargins(domino.target, domino)
+    selectedDomino.style.marginTop = top
+    selectedDomino.style.marginLeft = left
+    selectedDomino.style.marginRight = right
+    selectedDomino.style.transform = rotate
+        //if (sideTarget >= standartPoolCount) {
+    if (domino.target == 'left') {
+        if (sideTarget >= standartPoolCount) leftCountIndex++
+            leftDominoCount++
+            if (sideTarget >= standartPoolCount + 3) {
+                leftBottomIndex++
+                //TODO: фикс 3 доминошки сбоку 
             }
-        }
-        selectedDomino.style.marginTop = formula + 'px'
-        if (domino.reverse) {
-            selectedDomino.style.transform = 'rotate(270deg)'
-        } else selectedDomino.style.transform = 'rotate(90deg)'
-        if (domino.target == 'left') {
-            leftCountIndex++
-        } else if (domino.target == 'right') {
-            rightCountIndex++
-        }
+    } else if (domino.target == 'right') {
+        if (sideTarget >= standartPoolCount) rightCountIndex++
+            rightDominoCount++
+            if (sideTarget >= standartPoolCount + 3) {
+                rightBottomIndex++
+            }
     }
-    if (sideTarget >= standartPoolCount + 3) { // standartPoolCount
-        if (domino.target == 'right') {
-            selectedDomino.style.marginTop = 150 * (standartPoolCount / 2) + 75 + 'px' //'300px'
-            if (sideTarget == standartPoolCount * 2) {
-                selectedDomino.style.marginLeft = '-300px'
-                selectedDomino.style.marginRight = '-300px'
-            } else {
-                if (rightBottomIndex > 1) {
-                    selectedDomino.style.marginLeft = '-300px'
-                } else selectedDomino.style.marginLeft = '-300px'
-            }
-            if (domino.reverse) {
-                selectedDomino.style.transform = 'rotate(360deg)'
-            }
-            rightCountIndex++
-            rightBottomIndex++
-        } else if (domino.target == 'left') {
-            selectedDomino.style.marginTop = '300px'
-            if (sideTarget == standartPoolCount * 2) {
-                selectedDomino.style.marginLeft = '-300px'
-                selectedDomino.style.marginRight = '-300px'
-            } else {
-                if (leftBottomIndex > 1) {
-                    selectedDomino.style.marginRight = '-300px'
-                } else selectedDomino.style.marginRight = '0px'
-            }
-            if (domino.reverse) {
-                selectedDomino.style.transform += `rotate(180deg)`
-            } else selectedDomino.style.transform += `rotate(0deg)`
-            leftCountIndex++
-            leftBottomIndex++
-        }
-    }
+    //}
     // если не зашли в диапазон выше, проверяем на обычный reverse и инвертируем изображение
     if (!selectedDomino.style.transform && domino.reverse) {
         selectedDomino.style.transform = "rotate(180deg)"
@@ -202,17 +158,10 @@ socket.on('placeDomino', domino => {
         turn = false
     }
 
-    if (domino.target == 'right') {
-        rightDominoCount++
-    } else if (domino.target == 'left') {
-        leftDominoCount++
-    }
-
 
     if (!document.getElementById('user_domino_container').getElementsByClassName('user_domino').length) {
-        alert('Вы выиграли')
         socket.emit('gameOver')
-
+        alert('Вы выиграли')
     }
 })
 
@@ -306,6 +255,15 @@ function setAvaliableDominoPlacement(leftSide, rightSide) {
 
 function renderAvaliableDomino(target) {
     let newAvaliableDomino = document.createElement('div')
+
+    let { top, left, right, rotate } = getDominoMargins(target) // устанавливаем отступы
+    console.log(`top: ${top} left: ${left} right: ${right}`)
+    newAvaliableDomino.style.marginTop = top
+    newAvaliableDomino.style.marginRight = right
+    newAvaliableDomino.style.marginLeft = left
+    if (rotate) {
+        newAvaliableDomino.style.transform = rotate
+    }
     newAvaliableDomino.style.width = dominoWidth + 'px'
     newAvaliableDomino.style.height = dominoHeight + 'px'
     newAvaliableDomino.classList.add('avaliable_domino')
@@ -337,67 +295,83 @@ function createTurnNode(innerHtml) {
 function getDominoMargins(target, domino) {
     let sideTarget
     let sideCounter
-    let formula = ((150 * sideCounter) + 50)
 
     let top
     let left
     let right
+    let rotate
 
     if (target == 'right') {
         sideTarget = rightDominoCount
         sideCounter = rightCountIndex
         bottomCounter = rightBottomIndex
-
     } else if (target == 'left') {
         sideTarget = leftDominoCount
         sideCounter = leftCountIndex
         bottomCounter = leftBottomIndex
     }
+    let formula = ((150 * sideCounter) + 50)
     if (sideTarget >= standartPoolCount && sideTarget < standartPoolCount + 3) {
-        //newAvaliableDomino.style.transform = `rotate(270deg)`
+
+        if (domino && domino.reverse) {
+            if (target == 'right') {
+                rotate = 'rotate(270deg)'
+            } else rotate = 'rotate(90deg)'
+
+        } else {
+            if (target == 'right') {
+                rotate = 'rotate(90deg)'
+            } else rotate = 'rotate(270deg)'
+        }
 
         if (sideTarget == standartPoolCount) { // standartPoolCount
             left = '-50px'
             right = '-50px'
         } else {
             if (target == 'left') {
+                if (sideTarget > standartPoolCount + 1) {
+                    right = '-250px'
+                } else {
+                    right = '-100px'
+                }
                 left = '100px'
-                right = '-100px'
+                    //right = '-100px'
             } else if (target == 'right') {
                 if (sideTarget > standartPoolCount + 1) {
                     left = '-250px'
-                    right = '100px'
                 } else {
                     left = '-100px'
-                    right = '100px'
                 }
+                right = '100px'
             }
         }
         top = formula + 'px'
-            //newAvaliableDomino.style.transform = 'rotate(90deg)'
     } else if (sideTarget >= standartPoolCount + 3) { // standartPoolCount
+        let topFormula = 150 * (standartPoolCount / 2) + 150 + 'px'
         if (target == 'right') {
-            top = 150 * (standartPoolCount / 2) + 75 + 'px'
+            top = topFormula
             if (sideTarget == standartPoolCount * 2) {
                 left = '-300px'
-                right = '-300px'
+                    //right = '-300px'
             } else {
-                if (rightBottomIndex > 1) {
-                    left = '-300px'
-                } else newAvaliableDomino.style.marginLeft = '-300px'
-            }
-        } else if (target == 'left') {
-            newAvaliableDomino.style.marginTop = '300px'
-            if (sideTarget == standartPoolCount * 2) {
                 left = '-300px'
+            }
+            if (domino && !domino.reverse) {
+                rotate = 'rotate(180deg)'
+            } else rotate = 'rotate(360deg)'
+        } else if (target == 'left') {
+            top = topFormula
+            if (sideTarget == standartPoolCount * 2) {
                 right = '-300px'
             } else {
                 if (leftBottomIndex > 1) {
                     right = '-300px'
-                } else right = '0px'
+                } else right = '-300px'
             }
+            if (domino && domino.reverse) {
+                rotate = 'rotate(360deg)'
+            } else rotate = 'rotate(180deg)'
         }
     }
-
-    return { top, left, right }
+    return { top, left, right, rotate }
 }

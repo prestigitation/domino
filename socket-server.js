@@ -97,7 +97,6 @@ io.on('connect', socket => {
         console.log('SHOP LENGTH: ' + commonShopPool.length)
         let usersPoolIndex = 0
 
-        //FIXME: Домино не приходят в положенном количестве, проверить на дубликаты
         let userTurns = getUserTurns(dominoRoom.size, commonDominoPool)
         console.log('turns: ' + userTurns)
         poolHasStartDouble = userTurns.filter(el => el === true).length === 1
