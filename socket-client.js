@@ -32,7 +32,6 @@ socket.on('recieveAvaliablePlacement', (places) => {
         // удаляем все avaliable ноды, до отрисовки, чтоб исключить дубликаты
     let rightDuplicateDomino = field.querySelectorAll('.right_avaliable_domino')
     let leftDuplicateDomino = field.querySelectorAll('.left_avaliable_domino')
-    let firstAvaliableDomino = field.querySelectorAll('.avaliable_domino')
 
     if ((rightDuplicateDomino || leftDuplicateDomino) && !places.emptyField) {
         for (let elem of rightDuplicateDomino) {
@@ -130,7 +129,6 @@ socket.on('placeDomino', domino => {
             leftDominoCount++
             if (sideTarget >= standartPoolCount + 3) {
                 leftBottomIndex++
-                //TODO: фикс 3 доминошки сбоку 
             }
     } else if (domino.target == 'right') {
         if (sideTarget >= standartPoolCount) rightCountIndex++
@@ -154,15 +152,34 @@ socket.on('placeDomino', domino => {
     }
 
     if (turn) {
-        socket.emit('changeTurn', socket.id)
+        socket.emit('changeTurn')
+        socket.emit('changeQuantity', domino)
         turn = false
     }
+    socket.emit('checkForFish', domino)
 
 
     if (!document.getElementById('user_domino_container').getElementsByClassName('user_domino').length) {
         socket.emit('gameOver')
         alert('Вы выиграли')
     }
+})
+
+socket.on('requestFish', (domino) => {
+    console.log('domina')
+    console.log(domino);
+    socket.emit('getFish', {
+        pool: document.querySelectorAll('#user_domino_container .user_domino'),
+        socket: socket.id
+    })
+})
+
+socket.on('recieveFish', (score) => {
+    let text = ''
+    for (let [key, value] of score) {
+        text += 'Игрок ' + key + ' набрал ' + value + ' очков'
+    }
+    alert('РЫБА!' + text)
 })
 
 socket.on('gameOver', () => {

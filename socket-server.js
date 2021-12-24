@@ -19,34 +19,35 @@ let commonDominoPool = [
     []
 ]
 let commonShopPool = []
+let dominoCountMap
 
-//TODO: Обработать рыбу
-
-let fieldPool = [] // Общий пул, используемый на столе при выставлении домино
+let leftSide
+let rightSide
 
 let dominoRoom
 
 let poolHasStartDouble
 let turn // id сокета, который имеет право на ход. меняется по функции change turn и при инициализации стола
 
+let fishPlayersCounter = 0
+let fishPool
 
 io.on("connect_error", (err) => { console.log(`connect_error due to ${err.message}`); });
 
 io.on('connect', socket => {
     socket.on('checkAvaliablePlacement', obj => {
-        if (fieldPool.length == 0) {
+        if (!leftSide && !rightSide) {
             socket.emit('recieveAvaliablePlacement', {
                 leftSide: false,
                 rightSide: false,
                 emptyField: true,
             })
-            fieldPool[0] = {}
-            fieldPool[0].left = obj.leftSide
-            fieldPool[0].right = obj.rightSide
+            leftSide = obj.leftSide
+            rightSide = obj.rightSide
         } else {
             socket.emit('recieveAvaliablePlacement', {
-                leftSide: obj.leftSide == fieldPool[0].left || obj.rightSide == fieldPool[0].left,
-                rightSide: obj.leftSide == fieldPool[0].right || obj.rightSide == fieldPool[0].right,
+                leftSide: obj.leftSide == leftSide || obj.rightSide == leftSide,
+                rightSide: obj.leftSide == rightSide || obj.rightSide == rightSide,
                 emptyField: false,
             })
         }
@@ -59,6 +60,12 @@ io.on('connect', socket => {
         opponentPool = []
         shopPool = []
         commonDominoPool = []
+        fishPool = new Map()
+
+        let dominoSequence = [...generateStartDominoSequence()]
+            // массив из пар ключ значение, содержащий количество номиналов на столе 
+            // (по умолчанию каждый номинал содержит 0 доминошек)
+        dominoCountMap = new Map(dominoSequence)
 
         for (let j = 0; j < standartPoolCount; j++) {
             for (let t = j; t < standartPoolCount; t++) {
@@ -69,27 +76,8 @@ io.on('connect', socket => {
 
         let randomPool = _.chunk(_.shuffle(_.flattenDeep(dominoPool)), standartPoolCount)
         for (let i = 0; i < dominoRoom.size; i++) {
-            let pool = []
-                /*for (let k = 0; k < standartPoolCount; k++) {
-                    let selectedDomino
-                    do {
-                        selectedDomino = getRandomDomino()
-                    } while (_.includes(_.flattenDeep(commonDominoPool), selectedDomino))
-                    pool.push(selectedDomino)
-                }*/
-
-            // ПЕРЕТАСОВАТЬ flattenDeep МАССИВ, ПОТОМ СДЕЛАТЬ ЧАНК ПО КОЛИЧЕСТВУ СИМВОЛОВ
             commonDominoPool[i] = randomPool[i]
         }
-
-        console.log('0 CLIENT -=----------------------')
-        console.log(commonDominoPool[0])
-        console.log('1 CLIENT -=----------------------')
-        console.log(commonDominoPool[1])
-        console.log('2 CLIENT -=----------------------')
-        console.log(commonDominoPool[2])
-        console.log('3 CLIENT -=----------------------')
-        console.log(commonDominoPool[3])
 
         // в базар попадает то, что не вошло в пул игроков
         commonShopPool = _.difference(dominoPool, _.flattenDeep(commonDominoPool))
@@ -122,14 +110,11 @@ io.on('connect', socket => {
         }
     })
 
-    socket.on('changeTurn', (socketId) => {
+    socket.on('changeTurn', () => {
         let nextTurnUser = undefined
-
-        // передаем ход следующему игроку, если массив окончен, начинаем сначала
+            // передаем ход следующему игроку, если массив окончен, начинаем сначала
         nextTurnUser = getNextUser()
 
-        console.log('current: ' + turn)
-        console.log('next: ' + nextTurnUser)
         let turns = []
         let c = 0
         for (let user of dominoRoom) {
@@ -144,7 +129,6 @@ io.on('connect', socket => {
             io.to(user).emit('turn', turns[index])
             index++
         }
-
         turn = nextTurnUser
     })
 
@@ -161,13 +145,29 @@ io.on('connect', socket => {
             console.log(commonShopPool.length)
             socket.emit('recieveShopDomino', shopDomino)
         } else {
-            //experimental
-            // если базар пуст, передаем ход следующему игроку
             turn = getNextUser()
             sendTurn(turn)
-
             socket.emit('recieveShopDomino', { message: 'Базар пуст' })
         }
+    })
+
+    socket.on('checkForFish', (domino) => {
+        //проверка условия рыбы
+        if ((dominoCountMap.get(domino.rightSide) == standartPoolCount ||
+                dominoCountMap.get(domino.leftSide) == standartPoolCount) &&
+            leftSide == rightSide) {
+            socket.emit('requestFish', dominoCountMap)
+        }
+    })
+
+    socket.on('changeQuantity', (domino) => {
+        let localRightSide = domino.rightSide
+        let localLeftSide = domino.leftSide
+        if (localRightSide != localLeftSide) {
+            dominoCountMap.set(localRightSide, dominoCountMap.get(localRightSide) + 1)
+        } // если выбранное домино - дубль, тогда увеличиваем счетчик только 1 раз
+        //увеличиваем количество повторений домино, с которым работаем
+        dominoCountMap.set(localLeftSide, dominoCountMap.get(localLeftSide) + 1)
     })
 
     socket.on('gameOver', () => {
@@ -175,23 +175,31 @@ io.on('connect', socket => {
         socket.broadcast.emit('gameOver')
     })
 
+    socket.on('getFish', (player) => {
+        fishPlayersCounter++
+        fishPool.set(player.socket, parsePoolScore(player.pool)) // записываем пул 
+        if (fishPlayersCounter === dominoRoom.size) {
+            socket.emit('recieveFish', [...fishPool.entries()])
+            socket.broadcast.emit('recieveFish', [...fishPool.entries()])
+                //io.sockets.send('recieveFish', fishPool)
+        }
+    })
 
     socket.on('attemptDominoPlace', domino => {
         let bone = JSON.parse(domino.domino)
         let boneTargetSide = domino.targetSide
         let reverse // будет ли доминошка реверснута
         if (boneTargetSide == 'right') {
-            if (bone.rightSide == fieldPool[0].right) {
+            if (bone.rightSide == rightSide) {
                 reverse = true
-                fieldPool[0].right = bone.leftSide
-            } else fieldPool[0].right = bone.rightSide
+                rightSide = bone.leftSide
+            } else rightSide = bone.rightSide
         } else if (boneTargetSide == 'left') {
-            if (bone.leftSide == fieldPool[0].left) {
+            if (bone.leftSide == leftSide) {
                 reverse = true
-                fieldPool[0].left = bone.rightSide
-            } else fieldPool[0].left = bone.leftSide
+                leftSide = bone.rightSide
+            } else leftSide = bone.leftSide
         }
-
         for (let i of dominoRoom) {
             io.to(i).emit('placeDomino', {
                 rightSide: bone.rightSide,
@@ -210,33 +218,6 @@ function getRandomValueBetween(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getRandomDomino() {
-    let randValue = getRandomValueBetween(0, dominoPool.length - 1)
-    return dominoPool[randValue]
-        /*
-        let randValue = getRandomValueBetween(0, dominoPool.length - 1)
-        if (!_.includes(_.flattenDeep(commonDominoPool), dominoPool[randValue])) {
-            return dominoPool[randValue]
-        } else {
-            do {
-                randValue = getRandomValueBetween(0, dominoPool.length - 1)
-            } while (_.includes(_.flattenDeep(commonDominoPool), dominoPool[randValue]))
-            return dominoPool[randValue]
-        }*/
-}
-
-function existsInPool(pool, domino) {
-    /*let exists = false
-    if (_.includes(pool, domino)) exists = true
-    return exists*/
-    /*return _.some(pool[0], { leftSide: domino.leftSide, rightSide: domino.rightSide }) ||
-        _.some(pool[1], { leftSide: domino.leftSide, rightSide: domino.rightSide }) ||
-        _.some(pool[2], { leftSide: domino.leftSide, rightSide: domino.rightSide }) ||
-        _.some(pool[3], { leftSide: domino.leftSide, rightSide: domino.rightSide })*/
-    return _.includes(_.flattenDeep(pool), domino)
-
-}
-
 function getUserTurns(roomSize, pool) {
     let result = []
     let doublesArray = [
@@ -252,7 +233,6 @@ function getUserTurns(roomSize, pool) {
             }
         })
     }
-    console.log(doublesArray)
     for (let i in doublesArray) {
         if (Math.min(...doublesArray[i]) === 1) {
             result.push(true)
@@ -288,4 +268,18 @@ function getNextUser() {
     if (nextIndex !== -1 && room[nextIndex + 1]) {
         return room[nextIndex + 1]
     } else return room[0]
+}
+
+function parsePoolScore(pool) {
+    let sum = 0
+    for (let i in pool) {
+        sum += pool[i].rightSide + pool[i].leftSide
+    }
+    return sum
+}
+
+function* generateStartDominoSequence() {
+    for (let i = 0; i < standartPoolCount; i++) {
+        yield [i, 0]
+    }
 }

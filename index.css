@@ -62,8 +62,8 @@
     position: absolute;
     height: 75%;
     margin-top: 225px;
-    width: -moz-available;
-    /*width: 100%;*/
+    /*width: -moz-available;*/
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
     background: url("https://img3.goodfon.ru/wallpaper/nbig/6/54/derevo-fon-temnyy.jpg");
