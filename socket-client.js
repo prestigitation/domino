@@ -73,16 +73,18 @@ socket.on('turn', (value) => {
     if (value) {
         turn = true
         turnHtml = `
-            <span class="turn_text turn_player">
+            <div class="turn_text turn_player">
                 Сейчас ваш ход!
-            </span>
+            </div>
+            <div>Ваш ник: ${socket.id}</div>
             `
     } else {
         turn = false
         turnHtml = `
-                <span class="turn_text turn_opponent">
+                <div class="turn_text turn_opponent">
                     Сейчас ход противника
-                </span>
+                </div>
+                <div>Ваш ник: ${socket.id}</div>
                 `
     }
     createTurnNode(turnHtml)

@@ -94,4 +94,5 @@
     border: 2px solid sandybrown;
     padding-left: 5px;
     padding-right: 5px;
+    flex-direction: column;
 }
