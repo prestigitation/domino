@@ -182,6 +182,7 @@ socket.on('recieveFish', (score) => {
         text += 'Игрок ' + key + ' набрал ' + value + ' очков'
     }
     alert('РЫБА!' + text)
+    document.body.innerHTML = 'Игра окончена!'
 })
 
 socket.on('gameOver', () => {
